@@ -12,8 +12,8 @@ import google.generativeai as genai
 # ================= 網頁基礎與 UI 設定 =================
 st.set_page_config(page_title="AI 跨市場金融戰情室", layout="wide", page_icon="📈")
 
-# 🔑 【請在這裡貼上你的 Gemini API Key】 (記得保留前後的雙引號)
-GEMINI_API_KEY = "gen-lang-client-0623558373"
+# 🔑 【請在這裡貼上你的 Gemini API Key】 (記得保留前後的雙引號，且不要有空白)
+GEMINI_API_KEY = "AIzaSyAHsANu4XmY6N_n7gLcChIkA28kucrQARw"
 
 # ================= 🛡️ 輕量級資料庫與資安系統 =================
 # 建立資料庫連線 (免費且內建)
@@ -183,7 +183,27 @@ if st.sidebar.button("🟢 掃描「建議買入」(RSI < 30)"):
             except:
                 pass
         if not found_any:
-            st.sidebar.info("目前沒有符合條件的標的。")
+            st.sidebar.info("目前沒有符合買入條件的標的。")
+
+# 🔥 修復：把消失的建議賣出按鈕補回來了！
+if st.sidebar.button("🔴 掃描「建議賣出」(RSI > 70)"):
+    with st.sidebar.status("正在尋找超買標的..."):
+        found_any = False
+        for sym in scan_list:
+            try:
+                temp_data = yf.download(sym, period="1mo", progress=False)
+                if isinstance(temp_data.columns, pd.MultiIndex):
+                    temp_data.columns = temp_data.columns.get_level_values(0)
+                if len(temp_data) > 15:
+                    temp_data = calculate_indicators(temp_data)
+                    current_rsi = temp_data['RSI'].iloc[-1]
+                    if current_rsi > 70:
+                        st.sidebar.error(f"**{sym}** (RSI: {current_rsi:.1f})")
+                        found_any = True
+            except:
+                pass
+        if not found_any:
+            st.sidebar.info("目前沒有符合賣出條件的標的。")
 
 # ================= 主畫面 UI (四個頁籤) =================
 if not data.empty:
