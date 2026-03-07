@@ -13,7 +13,7 @@ import google.generativeai as genai
 st.set_page_config(page_title="全能金融戰情室", layout="wide", page_icon="📈")
 
 # 🔑 【請在這裡貼上你的 Gemini API Key】
-GEMINI_API_KEY = "YOUR_API_KEY_HERE"
+GEMINI_API_KEY = "gen-lang-client-0623558373"
 
 # ================= 🛡️ 輕量級資料庫與資安系統 =================
 # 建立/連線到 SQLite 資料庫
@@ -228,3 +228,4 @@ if not data.empty:
 
 else:
     st.error("找不到資料，請確認代碼是否正確。")
+
