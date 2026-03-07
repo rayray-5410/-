@@ -13,7 +13,6 @@ import google.generativeai as genai
 st.set_page_config(page_title="AI 跨市場金融戰情室", layout="wide", page_icon="📈")
 
 # 🔑 【請在這裡貼上你的 Gemini API Key】 (記得保留前後的雙引號，且不要有空白)
-# 讓程式去 Streamlit 的雲端保險箱裡面找金鑰
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # ================= 🛡️ 輕量級資料庫與資安系統 =================
@@ -315,4 +314,5 @@ if not data.empty:
 else:
     # 這是最後一道防線，如果真的全被鎖，畫面會優雅地提示，而不是崩潰跑出紅字
     st.warning("⚠️ Yahoo Finance 伺服器目前對雲端 IP 進行流量管制，暫時無法取得數據。請稍等幾分鐘後重新整理網頁！")
+
 
