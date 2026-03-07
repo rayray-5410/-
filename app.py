@@ -291,28 +291,32 @@ if not data.empty:
         else:
             st.write("目前 Yahoo 伺服器繁忙，暫時無法獲取新聞。請稍後重試。")
 
-    # ---------- 第四頁：IoT API 對接區 ----------
+   # ---------- 第四頁：IoT API 對接區 ----------
     with tab4:
         st.markdown("#### 🔌 微控制器 (MCU) 資料拋轉介面")
         st.caption("此區塊提供標準化 JSON 格式，供 ESP32 / Arduino 透過 HTTP GET 讀取並轉化為實體硬體作動 (如 LED 燈號指示)。")
         
-        if latest_price > data['SMA20'].iloc[-1]: 
-            action = "HOLD_OR_BUY"
-        else: 
-            action = "SELL_OR_WAIT"
+        # 🔥 防呆機制：檢查 'SMA20' 是否真的存在且有數值
+        if 'SMA20' in data.columns and not pd.isna(data['SMA20'].iloc[-1]):
+            sma20_val = data['SMA20'].iloc[-1]
+            action = "HOLD_OR_BUY" if latest_price > sma20_val else "SELL_OR_WAIT"
+        else:
+            # 如果數據太短算不出 SMA20，就給定預設值避免當機
+            sma20_val = 0.0
+            action = "DATA_TOO_SHORT" # 告訴硬體目前數據不足
 
         iot_payload = {
             "device_target": "ESP32",
             "ticker": ticker_symbol,
             "current_price": round(latest_price, 2),
-            "sma20_threshold": round(data['SMA20'].iloc[-1], 2),
+            "sma20_threshold": round(sma20_val, 2),
             "action_signal": action,
             "user_active": st.session_state['username']
         }
         st.json(iot_payload)
-
 else:
     # 這是最後一道防線，如果真的全被鎖，畫面會優雅地提示，而不是崩潰跑出紅字
     st.warning("⚠️ Yahoo Finance 伺服器目前對雲端 IP 進行流量管制，暫時無法取得數據。請稍等幾分鐘後重新整理網頁！")
+
 
 
