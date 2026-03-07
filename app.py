@@ -5,6 +5,7 @@ from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import requests # 🔧 新增：用來建立偽裝的瀏覽器連線
 
 # ================= 網頁基礎設定 =================
 st.set_page_config(page_title="全能金融戰情室", layout="wide", page_icon="📈")
@@ -23,7 +24,7 @@ elif market_type == "大盤指數":
 elif market_type == "加密貨幣":
     ticker_symbol = st.sidebar.selectbox("熱門加密貨幣", ["BTC-USD (比特幣)", "ETH-USD (以太幣)", "SOL-USD (索拉納)", "DOGE-USD (狗狗幣)"]).split(" ")[0]
 
-period = st.sidebar.select_slider("歷史數據範圍", options=["1mo", "3mo", "6mo", "1y", "2y", "5y"], value="1y") # 預設拉長到 1y 看回測比較準
+period = st.sidebar.select_slider("歷史數據範圍", options=["1mo", "3mo", "6mo", "1y", "2y", "5y"], value="1y")
 
 # ================= 核心運算與資料抓取 =================
 def calculate_indicators(data):
@@ -39,7 +40,14 @@ def calculate_indicators(data):
 
 @st.cache_data(ttl=1800) 
 def fetch_data(ticker, period):
-    ticker_obj = yf.Ticker(ticker)
+    # 🔥 破解 Yahoo 阻擋機制的關鍵：偽裝成正常的 Google Chrome 瀏覽器
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    })
+    
+    # 將偽裝的 session 傳給 yfinance
+    ticker_obj = yf.Ticker(ticker, session=session)
     data = ticker_obj.history(period=period)
     news = ticker_obj.news 
     if not data.empty:
@@ -66,9 +74,12 @@ else:
 if st.sidebar.button("🟢 掃描「建議買入」清單"):
     with st.sidebar.status("正在尋找超賣標的..."):
         found_any = False
+        # 掃描時也同樣需要偽裝
+        session = requests.Session()
+        session.headers.update({'User-Agent': 'Mozilla/5.0'})
         for sym in scan_list:
             try:
-                temp_data = yf.Ticker(sym).history(period="1mo")
+                temp_data = yf.Ticker(sym, session=session).history(period="1mo")
                 if len(temp_data) > 15:
                     temp_data = calculate_indicators(temp_data)
                     current_rsi = temp_data['RSI'].iloc[-1]
@@ -83,9 +94,11 @@ if st.sidebar.button("🟢 掃描「建議買入」清單"):
 if st.sidebar.button("🔴 掃描「建議賣出」清單"):
     with st.sidebar.status("正在尋找超買標的..."):
         found_any = False
+        session = requests.Session()
+        session.headers.update({'User-Agent': 'Mozilla/5.0'})
         for sym in scan_list:
             try:
-                temp_data = yf.Ticker(sym).history(period="1mo")
+                temp_data = yf.Ticker(sym, session=session).history(period="1mo")
                 if len(temp_data) > 15:
                     temp_data = calculate_indicators(temp_data)
                     current_rsi = temp_data['RSI'].iloc[-1]
@@ -106,7 +119,7 @@ if not data.empty:
     else:
         latest_rsi = 50.0 
 
-    short_name = stock_info.get('shortName', ticker_symbol)
+    short_name = stock_info.get('shortName', ticker_symbol) if stock_info else ticker_symbol
     st.subheader(f"{short_name} ({ticker_symbol}) - 最新報價: {latest_price:.2f}")
     
     tab1, tab2, tab3, tab4 = st.tabs(["📊 專業圖表", "👑 實戰策略回測 & AI", "📰 相關新聞", "🔌 IoT硬體對接"])
@@ -123,7 +136,7 @@ if not data.empty:
         fig.update_layout(xaxis_rangeslider_visible=False, height=500, margin=dict(l=0, r=0, t=30, b=0))
         st.plotly_chart(fig, use_container_width=True)
 
-    # ---------- 第二頁：實戰策略回測與 AI (🔥 全新獲利引擎) ----------
+    # ---------- 第二頁：實戰策略回測與 AI ----------
     with tab2:
         st.markdown("### 👑 實戰派策略回測：20日均線順勢交易")
         st.write("測試邏輯：收盤價站上 20 日均線就買入並持有，跌破就賣出空手 (避免大跌)。這能幫你抓住大波段利潤！")
@@ -132,35 +145,20 @@ if not data.empty:
         
         if len(df_ml) > 0 and 'SMA20' in df_ml.columns:
             bt_data = df_ml.copy()
-            
-            # 1. 產生持倉訊號 (大於均線 = 1 持有，小於均線 = 0 空手)
             bt_data['Position'] = np.where(bt_data['Close'] > bt_data['SMA20'], 1, 0)
-            
-            # 2. 計算每日市場的自然報酬率
             bt_data['Daily_Return'] = bt_data['Close'].pct_change()
-            
-            # 3. 策略每日報酬 = 昨天的持倉狀態 * 今天的市場報酬
             bt_data['Strategy_Return'] = bt_data['Position'].shift(1) * bt_data['Daily_Return']
-            
-            # 4. 計算總報酬率 (使用複利計算)
             bt_data = bt_data.dropna()
+            
             if not bt_data.empty:
-                # 策略報酬
                 strategy_cum_return = (1 + bt_data['Strategy_Return']).cumprod()
                 strategy_total_return = (strategy_cum_return.iloc[-1] - 1) * 100
-                
-                # 對照組：死抱不放的報酬
                 market_cum_return = (1 + bt_data['Daily_Return']).cumprod()
                 market_total_return = (market_cum_return.iloc[-1] - 1) * 100
                 
                 col_a, col_b = st.columns(2)
                 col_a.metric("📈 均線策略總報酬率", f"{strategy_total_return:.2f}%", f"勝過死抱不放 {strategy_total_return - market_total_return:.2f}%")
                 col_b.metric("📊 對照組 (單純死抱不放)", f"{market_total_return:.2f}%")
-                
-                if strategy_total_return > 0:
-                    st.success("太棒了！這套均線策略在這個時間段內成功為你創造正報酬！")
-                else:
-                    st.warning("這段時間市場可能處於上下震盪的「盤整期」，均線策略在沒有明確趨勢時容易被頻繁洗出場。")
 
         st.markdown("---")
         st.markdown("### 🤖 機器學習趨勢預測")
@@ -201,7 +199,6 @@ if not data.empty:
     # ---------- 第四頁：IoT API 對接區 ----------
     with tab4:
         st.markdown("### 🔌 微控制器 (MCU) 資料拋轉介面")
-        # 改以均線策略作為硬體觸發訊號
         if latest_price > data['SMA20'].iloc[-1]: 
             action = "HOLD_OR_BUY"
         else: 
