@@ -39,15 +39,16 @@ def calculate_indicators(data):
 
 @st.cache_data(ttl=1800) 
 def fetch_data(ticker, period):
-    # 聽從錯誤訊息的建議：完全不加 session，讓 yfinance 自己處理反封鎖
     ticker_obj = yf.Ticker(ticker)
     data = ticker_obj.history(period=period)
     news = ticker_obj.news 
     if not data.empty:
         data = calculate_indicators(data)
-    return data, news, ticker_obj.info
+    # 🔥 關鍵修改：移除了很容易被封鎖的 ticker_obj.info，只回傳 data 和 news
+    return data, news
 
-data, news_data, stock_info = fetch_data(ticker_symbol, period)
+# 接收端也拔掉 stock_info
+data, news_data = fetch_data(ticker_symbol, period)
 
 # ================= 側邊欄：🚀 快速選股掃描 =================
 st.sidebar.markdown("---")
@@ -107,8 +108,8 @@ if not data.empty:
     else:
         latest_rsi = 50.0 
 
-    short_name = stock_info.get('shortName', ticker_symbol) if stock_info else ticker_symbol
-    st.subheader(f"{short_name} ({ticker_symbol}) - 最新報價: {latest_price:.2f}")
+    # 🔥 關鍵修改：拔除 short_name 的依賴，直接顯示代碼
+    st.subheader(f"📊 {ticker_symbol} - 最新報價: {latest_price:.2f}")
     
     tab1, tab2, tab3, tab4 = st.tabs(["📊 專業圖表", "👑 實戰策略回測 & AI", "📰 相關新聞", "🔌 IoT硬體對接"])
     
@@ -203,4 +204,4 @@ if not data.empty:
         st.json(iot_payload)
 
 else:
-    st.error("找不到資料，請確認代碼是否正確。")
+    st.error("找不到資料，請確認代碼是否正確或重整網頁重試。")
