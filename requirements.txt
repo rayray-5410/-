@@ -3,3 +3,4 @@ yfinance
 plotly
 pandas
 scikit-learn
+google-generativeai
