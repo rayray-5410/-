@@ -5,7 +5,6 @@ from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
-import requests # 🔧 新增：用來建立偽裝的瀏覽器連線
 
 # ================= 網頁基礎設定 =================
 st.set_page_config(page_title="全能金融戰情室", layout="wide", page_icon="📈")
@@ -40,14 +39,8 @@ def calculate_indicators(data):
 
 @st.cache_data(ttl=1800) 
 def fetch_data(ticker, period):
-    # 🔥 破解 Yahoo 阻擋機制的關鍵：偽裝成正常的 Google Chrome 瀏覽器
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-    })
-    
-    # 將偽裝的 session 傳給 yfinance
-    ticker_obj = yf.Ticker(ticker, session=session)
+    # 聽從錯誤訊息的建議：完全不加 session，讓 yfinance 自己處理反封鎖
+    ticker_obj = yf.Ticker(ticker)
     data = ticker_obj.history(period=period)
     news = ticker_obj.news 
     if not data.empty:
@@ -74,12 +67,9 @@ else:
 if st.sidebar.button("🟢 掃描「建議買入」清單"):
     with st.sidebar.status("正在尋找超賣標的..."):
         found_any = False
-        # 掃描時也同樣需要偽裝
-        session = requests.Session()
-        session.headers.update({'User-Agent': 'Mozilla/5.0'})
         for sym in scan_list:
             try:
-                temp_data = yf.Ticker(sym, session=session).history(period="1mo")
+                temp_data = yf.Ticker(sym).history(period="1mo")
                 if len(temp_data) > 15:
                     temp_data = calculate_indicators(temp_data)
                     current_rsi = temp_data['RSI'].iloc[-1]
@@ -94,11 +84,9 @@ if st.sidebar.button("🟢 掃描「建議買入」清單"):
 if st.sidebar.button("🔴 掃描「建議賣出」清單"):
     with st.sidebar.status("正在尋找超買標的..."):
         found_any = False
-        session = requests.Session()
-        session.headers.update({'User-Agent': 'Mozilla/5.0'})
         for sym in scan_list:
             try:
-                temp_data = yf.Ticker(sym, session=session).history(period="1mo")
+                temp_data = yf.Ticker(sym).history(period="1mo")
                 if len(temp_data) > 15:
                     temp_data = calculate_indicators(temp_data)
                     current_rsi = temp_data['RSI'].iloc[-1]
