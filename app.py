@@ -185,7 +185,6 @@ if st.sidebar.button("🟢 掃描「建議買入」(RSI < 30)"):
         if not found_any:
             st.sidebar.info("目前沒有符合買入條件的標的。")
 
-# 🔥 修復：把消失的建議賣出按鈕補回來了！
 if st.sidebar.button("🔴 掃描「建議賣出」(RSI > 70)"):
     with st.sidebar.status("正在尋找超買標的..."):
         found_any = False
@@ -280,8 +279,9 @@ if not data.empty:
                 else:
                     with st.spinner("Gemini 正在閱讀新聞並進行深度推理..."):
                         try:
+                            # 🔥 已經為你更新為最新最快的 gemini-1.5-flash 模型！
                             genai.configure(api_key=GEMINI_API_KEY)
-                            model = genai.GenerativeModel('gemini-pro')
+                            model = genai.GenerativeModel('gemini-1.5-flash')
                             prompt = f"你是一個專業的華爾街金融分析師。請閱讀以下關於 {ticker_symbol} 的最新新聞標題，並給出一段簡短的繁體中文分析。判斷目前的市場情緒是看漲、看跌還是中立，並說明原因：\n\n" + "\n".join(news_titles)
                             response = model.generate_content(prompt)
                             st.success("分析完成！")
