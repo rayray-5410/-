@@ -279,9 +279,9 @@ if not data.empty:
                 else:
                     with st.spinner("Gemini 正在閱讀新聞並進行深度推理..."):
                         try:
-                            # 🔥 已經為你更新為最新最快的 gemini-1.5-flash 模型！
+                            # 🔥 已經為你升級為最新強大的 gemini-2.5-flash 模型！
                             genai.configure(api_key=GEMINI_API_KEY)
-                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            model = genai.GenerativeModel('gemini-2.5-flash')
                             prompt = f"你是一個專業的華爾街金融分析師。請閱讀以下關於 {ticker_symbol} 的最新新聞標題，並給出一段簡短的繁體中文分析。判斷目前的市場情緒是看漲、看跌還是中立，並說明原因：\n\n" + "\n".join(news_titles)
                             response = model.generate_content(prompt)
                             st.success("分析完成！")
